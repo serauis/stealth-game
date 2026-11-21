@@ -31,6 +31,32 @@ for (const name of shotNames) {
   if (size > 262144) throw new Error(`screenshot over 256 KiB: ${name}`);
 }
 
+// The same courtesy for game/: the gate caps it at 993 entries and 48 MiB
+// in all, so walk the tree once here and refuse a hand-in the scorer would
+// refuse anyway, naming the count that broke the cap.
+function walkGame(dir, prefix, acc) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    acc.entries += 1;
+    if (entry.isDirectory()) walkGame(join(dir, entry.name), rel, acc);
+    else acc.bytes += statSync(join(dir, entry.name)).size;
+    acc.paths.push(rel);
+  }
+  return acc;
+}
+const gameTree = walkGame(join(here, 'game'), '', { entries: 0, bytes: 0, paths: [] });
+if (gameTree.entries > 993) throw new Error(`too many game entries: ${gameTree.entries}`);
+if (gameTree.bytes > 50331648) throw new Error(`game too large: ${gameTree.bytes} bytes`);
+
+// And the quietest cap of the five: no path under game/ may run past 1,000
+// UTF-8 bytes. Byte length, not character count — a name full of multibyte
+// characters is longer than it looks, so measure it the way the gate does.
+for (const rel of gameTree.paths) {
+  if (Buffer.byteLength(rel, 'utf8') > 1000) {
+    throw new Error(`game path over 1000 bytes: ${rel}`);
+  }
+}
+
 // The scorer's own caps (reference/gate.json): only text_max_bytes shapes the
 // bytes; the others refuse an entry the scorer would refuse (more than 4
 // screenshots or one over 256 KiB; more than 993 files in game/ or 48 MiB of

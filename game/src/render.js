@@ -170,6 +170,11 @@ export function drawGuards(ctx, guards, walls) {
     for (let i = 1; i < poly.length; i += 1) ctx.lineTo(poly[i].x, poly[i].y);
     ctx.closePath();
     ctx.fill();
+    // Contact shadow: grounds the warden so his silhouette reads at a glance.
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(guard.x, guard.y + GUARD_R * 0.78, GUARD_R * 1.05, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
     // Body: a warden in a red coat, facing where he looks.
     ctx.fillStyle = COLORS.guardBody;
     ctx.beginPath();
@@ -219,8 +224,13 @@ export function drawPlayer(ctx, player, time) {
   const bob = player.moving ? Math.sin(time * 10) * 1.5 : 0;
   ctx.save();
   if (player.hidden) ctx.globalAlpha = 0.45;
-  // Hooded cloak: a violet teardrop pointing where Moth faces.
   ctx.translate(player.x, player.y + bob * 0.4);
+  // Contact shadow under the cloak, drawn unrotated so it stays grounded.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, PLAYER_R * 0.82, PLAYER_R * 1.05, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Hooded cloak: a violet teardrop pointing where Moth faces.
   ctx.rotate(player.facing + Math.PI / 2);
   ctx.fillStyle = COLORS.playerCloak;
   ctx.beginPath();
@@ -289,6 +299,25 @@ export function drawHud(ctx, hud) {
   ctx.textAlign = 'right';
   ctx.fillText(hud.playerHidden ? 'HIDDEN' : hud.playerLit ? 'IN LIGHT' : 'IN SHADOW', VIEW_W - 16, HUD_H / 2);
   ctx.textAlign = 'left';
+}
+
+// Alarm vignette: the edges of the screen close in with heat as the
+// hottest warden's meter climbs — a whisper of orange while he is only
+// suspicious, a pulsing red once the chase is on. It is the detection
+// system made visible at arm's length, no HUD-reading required.
+export function drawAlarmVignette(ctx, maxSuspicion, time, anyChase) {
+  if (maxSuspicion < 35) return;
+  const strength = Math.min(1, (maxSuspicion - 35) / 65);
+  const pulse = anyChase ? 0.78 + 0.22 * Math.sin(time * 7) : 1;
+  const alpha = 0.3 * strength * pulse;
+  const g = ctx.createRadialGradient(
+    VIEW_W / 2, VIEW_H / 2, 320,
+    VIEW_W / 2, VIEW_H / 2, 780,
+  );
+  g.addColorStop(0, 'rgba(255, 45, 35, 0)');
+  g.addColorStop(1, `rgba(255, 45, 35, ${alpha.toFixed(3)})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 }
 
 export function drawHint(ctx, text) {

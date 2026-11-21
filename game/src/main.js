@@ -9,7 +9,7 @@ import {
   LEVEL_BONUS_MIN,
 } from './config.js';
 import { LEVELS, borderWalls } from './level.js';
-import { Guard } from './guards.js';
+import { Guard, GUARD_STATE } from './guards.js';
 import { Player } from './player.js';
 import { SoundBank } from './audio.js';
 import { Input } from './input.js';
@@ -24,6 +24,7 @@ import {
   drawGuards,
   drawPlayer,
   drawHud,
+  drawAlarmVignette,
   drawHint,
   drawTitleScreen,
   drawLevelClearScreen,
@@ -259,6 +260,12 @@ export class Game {
       playerHidden: this.player.hidden,
       playerLit: isLit(this.player.x, this.player.y, this.level.lamps),
     });
+    drawAlarmVignette(
+      ctx,
+      maxSuspicion,
+      t,
+      this.guards.some((g) => g.state === GUARD_STATE.CHASE),
+    );
     drawHint(ctx, this.hint);
     if (this.screen === SCREENS.LEVEL_CLEAR) {
       this.buttons = drawLevelClearScreen(ctx, this.level.name, this.levelBonus, this.score, [
